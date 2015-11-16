@@ -16,10 +16,10 @@ for i in range(1000):
 # Convert data into three dimensional numpy array
 LDA = lda.LDA()
 LDA.setData(data)
-result = LDA.solve(nTopics=8)
+result = LDA.solve(nTopics)
 
 # Show topics obtained
-for i in range(8):
+for i in range(nTopics):
     out = np.zeros((4,4))
     for j in range(255*4):
         out += np.random.dirichlet(result[i,:]).reshape((4,4))

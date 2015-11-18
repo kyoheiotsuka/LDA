@@ -9,10 +9,9 @@ class LDA:
     # Variational implimentation of smoothed LDA
 
     def __init__(self):
-        
-        # Set values for stopping iteration
-        self.epsilon = 1e-4
-        self.delta = None
+
+        # Initialize class 
+        pass
     
     def setData(self,data):
         # Data is required to be given in a three dimensional numpy array, [nDocuments,nVocabulary,nObserved]
@@ -22,7 +21,7 @@ class LDA:
         self.nVocabulary = data.shape[1]
         self.data = data
     
-    def solve(self,nTopics):
+    def solve(self,nTopics,epsilon=1e-4):
         
         # Set additional parameters
         self.nTopics = nTopics
@@ -47,17 +46,16 @@ class LDA:
         nIteration = 0
         while(1):
             
-            self.delta = 0.0
+            deltaMax = 0.0
             tic = time.clock()
-            
+
             # Update qPhi
-            for k in range(self.nTopics):
-                qPhi = self.qPhi[k,:]
-                qPhi[:] = self.beta
-                for d in range(self.nDocuments):
-                    doc = self.data[d,:,:]
-                    qZ = self.qZ[d,:,:]
-                    qPhi += qZ[:,k] * doc[:,1]
+            qPhi = self.qPhi[:,:]
+            qPhi[:] = np.tile(self.beta.reshape((1,self.nVocabulary)),(self.nTopics,1))
+            for d in range(self.nDocuments):
+                doc = self.data[d,:,:]
+                qZ = self.qZ[d,:,:]
+                qPhi += (qZ[:,:] * doc[:,1].reshape((doc.shape[0],1))).T
             
             # Iterate documents
             for d in range(self.nDocuments):
@@ -86,18 +84,17 @@ class LDA:
                 qThetaNew[:] = self.alpha
                 qThetaNew += (qZ * doc[:,1].reshape((qZ.shape[0],1))).sum(axis=0)
                 delta = np.abs(qTheta-qThetaNew).sum()/doc[:,1].sum()
-                self.delta = max(self.delta,delta)
+                deltaMax = max(deltaMax,delta)
             
             toc = time.clock()
-            print (nIteration,self.delta,tic-toc)
+            print (nIteration,deltaMax,tic-toc)
             nIteration += 1
             
             # Break if converged
-            if self.delta<self.epsilon:
+            if deltaMax<epsilon:
                 break
             
-        return self.qPhi
-
+        return
 
 
 

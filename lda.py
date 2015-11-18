@@ -2,7 +2,7 @@
 
 import numpy as np
 import scipy.special
-import copy, time
+import time
 
 
 class LDA:
@@ -95,19 +95,5 @@ class LDA:
                 break
             
         return
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

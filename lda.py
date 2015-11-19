@@ -21,14 +21,14 @@ class LDA:
         self.nVocabulary = data.shape[1]
         self.data = data
     
-    def solve(self,nTopics,epsilon=1e-4):
+    def solve(self,nTopics,epsilon=1e-4,alpha=1.0,beta=0.01):
         
         # Set additional parameters
         self.nTopics = nTopics
         
         # Prior distribution for alpha and beta
-        self.alpha = np.full(self.nTopics,1.0,dtype=np.float32)
-        self.beta = np.full(self.nVocabulary,0.01,dtype=np.float32)
+        self.alpha = np.full(self.nTopics,alpha,dtype=np.float32)
+        self.beta = np.full(self.nVocabulary,beta,dtype=np.float32)
         
         # Define q(theta)
         self.qTheta = np.empty((self.nDocuments,self.nTopics),dtype=np.float32)
@@ -66,7 +66,7 @@ class LDA:
                 qThetaNew = self.qThetaNew[d,:]
                 
                 # Update qTheta
-                if nIteration==0:
+                if nIteration == 0:
                     qTheta[:] = self.alpha
                     qTheta += (qZ * doc[:,1].reshape((qZ.shape[0],1))).sum(axis=0)
                 else:

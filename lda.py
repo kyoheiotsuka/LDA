@@ -9,7 +9,6 @@ class LDA:
     # Variational implimentation of smoothed LDA
 
     def __init__(self):
-
         # Initialize class 
         pass
     
@@ -58,7 +57,7 @@ class LDA:
                 qZ = self.qZ[d,:,:]
                 qPhi += (qZ[:,:] * doc[:,1].reshape((doc.shape[0],1))).T
             phiExpLog = scipy.special.psi(self.qPhi[:,:]+1.0)
-            phiExpLog -= np.tile(scipy.special.psi(self.qPhi[:,:].sum(axis=1)).reshape((self.nTopics,1)),(1,self.nVocabulary))
+            phiExpLog -= np.tile(scipy.special.psi((self.qPhi[:,:]+1.0).sum(axis=1)).reshape((self.nTopics,1)),(1,self.nVocabulary))
             
             # Iterate documents
             for d in range(self.nDocuments):
@@ -74,7 +73,7 @@ class LDA:
                 else:
                     qTheta[:] = qThetaNew
                 thetaExpLog = scipy.special.psi(qTheta+1.0)
-                thetaExpLog -= scipy.special.psi(qTheta.sum())
+                thetaExpLog -= scipy.special.psi((qTheta+1.0).sum())
 
                 # Update qZ
                 qZ[:,:] = np.exp(phiExpLog.T+np.tile(thetaExpLog.reshape((1,self.nTopics)),(self.nVocabulary,1)))
@@ -91,7 +90,7 @@ class LDA:
                 break
 
             toc = time.clock()
-            print (nIteration,deltaMax,tic-toc)
+            print (nIteration,deltaMax,toc-tic)
             nIteration += 1
             
         return
@@ -100,7 +99,6 @@ class LDA:
         # Save Object
         with open(name,"wb") as output:
             cPickle.dump(self.__dict__,output,protocol=cPickle.HIGHEST_PROTOCOL)
-        return
 
     def load(self,name):
         # Load Object
@@ -112,7 +110,7 @@ class LDA:
 
         # Utilize topic information with training data
         phiExpLog = scipy.special.psi(self.qPhi[:,:]+1.0)
-        phiExpLog -= np.tile(scipy.special.psi(self.qPhi[:,:].sum(axis=1)).reshape((self.nTopics,1)),(1,self.nVocabulary))
+        phiExpLog -= np.tile(scipy.special.psi((self.qPhi[:,:]+1.0).sum(axis=1)).reshape((self.nTopics,1)),(1,self.nVocabulary))
         
         # Define parameters
         nDataPredict = dataPredict.shape[0]
@@ -143,7 +141,7 @@ class LDA:
                 else:
                     qTheta[:] = qThetaNew
                 thetaExpLog = scipy.special.psi(qTheta+1.0)
-                thetaExpLog -= scipy.special.psi(qTheta.sum())
+                thetaExpLog -= scipy.special.psi((qTheta+1.0).sum())
 
                 # Update qZ
                 qZ[:,:] = np.exp(phiExpLog.T+np.tile(thetaExpLog.reshape((1,self.nTopics)),(self.nVocabulary,1)))
@@ -160,7 +158,7 @@ class LDA:
                 break
 
             toc = time.clock()
-            print (nIteration,deltaMax,tic-toc)
+            print (nIteration,deltaMax,toc-tic)
             nIteration += 1
 
         return qThetaPredict

@@ -1,7 +1,7 @@
 # Latent Dirichlet Allocation (LDA)
 
 Implementation of Latent Dirichlet Allocation (LDA) using variational Bayesian inference is provided in this class.
-For details on LDA, please refer to the original paper Blei et al. (2003) and/or wikipedia.
+For details on LDA, please refer to the original paper [Blei et al. (2003)](https://www.cs.princeton.edu/~blei/papers/BleiNgJordan2003.pdf) and/or article on [wikipedia](https://en.wikipedia.org/wiki/Latent_Dirichlet_allocation).
 
 ## Sample Code
 
@@ -21,5 +21,3 @@ LDA class provided not only supports extracting topics from training data but al
 
 ## Licence
 [MIT](https://github.com/kyoheiotsuka/logisticRegression/blob/master/LICENSE)
-## Author
-[kyoheiotsuka](https://github.com/kyoheiotsuka)

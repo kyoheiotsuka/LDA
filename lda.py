@@ -105,8 +105,8 @@ class LDA:
         nDataPredict = dataPredict.shape[0]
 
         # utilize topic information with training data
-        phiExpLog = scipy.special.psi(self.qPhi[:,:]+1.0)
-        phiExpLog -= np.tile(scipy.special.psi((self.qPhi[:,:]+1.0).sum(axis=1)).reshape((self.nTopics,1)),(1,self.nVocabulary))
+        phiExpLog = scipy.special.psi(self.qPhi[:,:])
+        phiExpLog -= np.tile(scipy.special.psi((self.qPhi[:,:]).sum(axis=1)).reshape((self.nTopics,1)),(1,self.nVocabulary))
         
         # define q(theta) for unseen data
         qThetaPredict = np.empty((nDataPredict,self.nTopics),dtype=np.float32)

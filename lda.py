@@ -1,168 +1,200 @@
 # -*- coding: utf-8 -*-
-
 import numpy as np
 import scipy.special
 import time, cPickle
+import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 
 
 class LDA:
-    # Variational implimentation of smoothed LDA
+    # variational implimentation of smoothed LDA
 
     def __init__(self):
-        # Initialize class 
+        # do nothing particularly
         pass
     
     def setData(self,data):
-        # Data is required to be given in a three dimensional numpy array, [nDocuments,nVocabulary,nObserved]
+        # data is required to be given in a two dimensional numpy array (nDocuments,nVocabulary)
+        # with each element representing the number of times observed
         
-        # Set additional parameters
+        # set parameters
+        self.data = data
         self.nDocuments = data.shape[0]
         self.nVocabulary = data.shape[1]
-        self.data = data
     
-    def solve(self,nTopics,epsilon=1e-4,alpha=1.0,beta=0.01):
+    def solve(self,nTopics,epsilon=1e-3,alpha=1.0,beta=0.01):
         
-        # Set additional parameters
+        # set additional parameters
         self.nTopics = nTopics
         self.epsilon = epsilon
         
-        # Prior distribution for alpha and beta
-        self.alpha = np.full(self.nTopics,alpha,dtype=np.float32)
-        self.beta = np.full(self.nVocabulary,beta,dtype=np.float32)
+        # prior distribution for alpha and beta
+        self.alpha = np.full(self.nTopics,alpha,dtype=np.float64)
+        self.beta = np.full(self.nVocabulary,beta,dtype=np.float64)
         
-        # Define q(theta)
-        self.qTheta = np.empty((self.nDocuments,self.nTopics),dtype=np.float32)
-        self.qThetaNew = np.empty((self.nDocuments,self.nTopics),dtype=np.float32)
+        # define q(theta)
+        self.qTheta = np.empty((self.nDocuments,self.nTopics),dtype=np.float64)
+        self.qThetaNew = np.empty((self.nDocuments,self.nTopics),dtype=np.float64)
         
-        # Define q(phi)
-        self.qPhi = np.empty((self.nTopics,self.nVocabulary),dtype=np.float32)
+        # define q(phi)
+        self.qPhi = np.empty((self.nTopics,self.nVocabulary),dtype=np.float64)
         
-        # Initialize q(z)
+        # define and initialize q(z)
         self.qZ = np.random.rand(self.nDocuments,self.nVocabulary,self.nTopics)
         for i in range(self.qZ.shape[0]):
             self.qZ[i] /= self.qZ[i].sum(axis=1).reshape((self.qZ[i].shape[0],1))
         
-        # Start solving using variational Bayes
+        # start solving using variational Bayes
         nIteration = 0
         while(1):
             
             deltaMax = 0.0
             tic = time.clock()
 
-            # Update qPhi
+            # update qPhi
             qPhi = self.qPhi[:,:]
-            qPhi[:] = np.tile(self.beta.reshape((1,self.nVocabulary)),(self.nTopics,1))-1.0
+            qPhi[:] = np.tile(self.beta.reshape((1,self.nVocabulary)),(self.nTopics,1))
             for d in range(self.nDocuments):
-                doc = self.data[d,:,:]
+                doc = self.data[d,:]
                 qZ = self.qZ[d,:,:]
-                qPhi += (qZ[:,:] * doc[:,1].reshape((doc.shape[0],1))).T
-            phiExpLog = scipy.special.psi(self.qPhi[:,:]+1.0)
-            phiExpLog -= np.tile(scipy.special.psi((self.qPhi[:,:]+1.0).sum(axis=1)).reshape((self.nTopics,1)),(1,self.nVocabulary))
+                qPhi += (qZ[:,:] * doc.reshape((doc.shape[0],1))).T
+            phiExpLog = scipy.special.psi(self.qPhi[:,:])
+            phiExpLog -= np.tile(scipy.special.psi((self.qPhi[:,:]).sum(axis=1)).reshape((self.nTopics,1)),(1,self.nVocabulary))
             
-            # Iterate documents
+            # iterate throught all documents
             for d in range(self.nDocuments):
-                doc = self.data[d,:,:]
+                doc = self.data[d,:]
                 qZ = self.qZ[d,:,:]
                 qTheta = self.qTheta[d,:]
                 qThetaNew = self.qThetaNew[d,:]
                 
-                # Update qTheta
+                # update qTheta
                 if nIteration == 0:
-                    qTheta[:] = self.alpha-1.0
-                    qTheta += (qZ * doc[:,1].reshape((qZ.shape[0],1))).sum(axis=0)
+                    qTheta[:] = self.alpha
+                    qTheta += (qZ * doc.reshape((qZ.shape[0],1))).sum(axis=0)
                 else:
                     qTheta[:] = qThetaNew
-                thetaExpLog = scipy.special.psi(qTheta+1.0)
-                thetaExpLog -= scipy.special.psi((qTheta+1.0).sum())
+                thetaExpLog = scipy.special.psi(qTheta)
+                thetaExpLog -= scipy.special.psi((qTheta).sum())
 
-                # Update qZ
+                # update qZ
                 qZ[:,:] = np.exp(phiExpLog.T+np.tile(thetaExpLog.reshape((1,self.nTopics)),(self.nVocabulary,1)))
                 qZ /= qZ.sum(axis=1).reshape((self.nVocabulary,1))
                 
-                # Measure amount of change
-                qThetaNew[:] = self.alpha-1.0
-                qThetaNew += (qZ * doc[:,1].reshape((qZ.shape[0],1))).sum(axis=0)
-                delta = np.abs(qTheta-qThetaNew).sum()/doc[:,1].sum()
+                # measure amount of change
+                qThetaNew[:] = self.alpha
+                qThetaNew += (qZ * doc.reshape((qZ.shape[0],1))).sum(axis=0)
+                delta = np.abs(qTheta-qThetaNew).sum()/doc.sum()
                 deltaMax = max(deltaMax,delta)
             
-            # Break if converged
+            # break if converged
             if deltaMax<self.epsilon:
                 break
 
+            # display information
             toc = time.clock()
-            print (nIteration,deltaMax,toc-tic)
+            self.heatmap(nIteration)
+            print "nIteration=%d, delta=%f, time=%.5f"%(nIteration,deltaMax,toc-tic)
             nIteration += 1
-            
-        return
 
-    def save(self,name):
-        # Save Object
-        with open(name,"wb") as output:
-            cPickle.dump(self.__dict__,output,protocol=cPickle.HIGHEST_PROTOCOL)
-
-    def load(self,name):
-        # Load Object
-        with open(name,"rb") as input:
-            self.__dict__.update(cPickle.load(input))
-        
     def predict(self,dataPredict):
-        # Data to predict is required to be given in a three dimensional numpy array, [nDocuments,nVocabulary,nObserved]
+        # dataPredict is required to be given in a two dimensional numpy array (nDocuments,nVocabulary)
+        # with each element representing the number of times observed
 
-        # Utilize topic information with training data
+        # set additional parameters
+        nDataPredict = dataPredict.shape[0]
+
+        # utilize topic information with training data
         phiExpLog = scipy.special.psi(self.qPhi[:,:]+1.0)
         phiExpLog -= np.tile(scipy.special.psi((self.qPhi[:,:]+1.0).sum(axis=1)).reshape((self.nTopics,1)),(1,self.nVocabulary))
         
-        # Define parameters
-        nDataPredict = dataPredict.shape[0]
+        # define q(theta) for unseen data
         qThetaPredict = np.empty((nDataPredict,self.nTopics),dtype=np.float32)
         qThetaPredictNew = np.empty((nDataPredict,self.nTopics),dtype=np.float32)
+
+        # define and initialize q(z) for unseen data
         qZPredict = np.random.rand(nDataPredict,self.nVocabulary,self.nTopics)
         for i in range(qZPredict.shape[0]):
             qZPredict[i] /= qZPredict[i].sum(axis=1).reshape((qZPredict[i].shape[0],1))
             
-        # Start predicting
+        # start prediction
         nIteration = 0
         while(1):
 
             deltaMax = 0.0
             tic = time.clock()
 
-            # Iterate documents to predict
+            # iterate over all documents
             for d in range(nDataPredict):
-                doc = dataPredict[d,:,:]
+                doc = dataPredict[d,:]
                 qZ = qZPredict[d,:,:]
                 qTheta = qThetaPredict[d,:]
                 qThetaNew = qThetaPredictNew[d,:]
 
-                # Update qTheta
+                # update qTheta for unseen data
                 if nIteration == 0:
-                    qTheta[:] = self.alpha-1.0
-                    qTheta += (qZ * doc[:,1].reshape((qZ.shape[0],1))).sum(axis=0)
+                    qTheta[:] = self.alpha
+                    qTheta += (qZ * doc.reshape((qZ.shape[0],1))).sum(axis=0)
                 else:
                     qTheta[:] = qThetaNew
-                thetaExpLog = scipy.special.psi(qTheta+1.0)
-                thetaExpLog -= scipy.special.psi((qTheta+1.0).sum())
+                thetaExpLog = scipy.special.psi(qTheta)
+                thetaExpLog -= scipy.special.psi((qTheta).sum())
 
-                # Update qZ
+                # update qZ for unseen data
                 qZ[:,:] = np.exp(phiExpLog.T+np.tile(thetaExpLog.reshape((1,self.nTopics)),(self.nVocabulary,1)))
                 qZ /= qZ.sum(axis=1).reshape((self.nVocabulary,1))
 
-                # Measure amount of change
-                qThetaNew[:] = self.alpha-1.0
-                qThetaNew += (qZ * doc[:,1].reshape((qZ.shape[0],1))).sum(axis=0)
-                delta = np.abs(qTheta-qThetaNew).sum()/doc[:,1].sum()
+                # measure amount of change
+                qThetaNew[:] = self.alpha
+                qThetaNew += (qZ * doc.reshape((qZ.shape[0],1))).sum(axis=0)
+                delta = np.abs(qTheta-qThetaNew).sum()/doc.sum()
                 deltaMax = max(deltaMax,delta)
 
-            # Break if converged
+            # break if converged
             if deltaMax<self.epsilon:
                 break
 
+            # display information
             toc = time.clock()
             print (nIteration,deltaMax,toc-tic)
             nIteration += 1
 
         return qThetaPredict
 
+    def heatmap(self,nIteration):
+        # save heatmap image of topic-word distribution
+        topicWordDistribution = self.qPhi/self.qPhi.sum(axis=1).reshape((self.nTopics,1))
 
+        plt.clf()
+        fig,ax = plt.subplots()
 
+        # visualize topic-word distribution
+        X,Y = np.meshgrid(np.arange(topicWordDistribution.shape[1]+1),np.arange(topicWordDistribution.shape[0]+1))
+        image = ax.pcolormesh(X,Y,topicWordDistribution)
+        plt.xlim(0,topicWordDistribution.shape[1])
+        plt.xlabel("Vocabulary ID")
+        plt.ylabel("Topic ID")
 
+        # show colorbar
+        divider = make_axes_locatable(ax)
+        ax_cb = divider.new_horizontal(size="2%",pad=0.05)
+        fig.add_axes(ax_cb)
+        plt.colorbar(image,cax=ax_cb)
+        figure = plt.gcf()
+        figure.set_size_inches(16,12)
+        plt.tight_layout()
+
+        # save image as a file
+        plt.savefig("visualization/nIteration_%d.jpg"%nIteration,dpi=100)
+        plt.close()
+
+    def save(self,name):
+        # save object as a file
+        with open(name,"wb") as output:
+            cPickle.dump(self.__dict__,output,protocol=cPickle.HIGHEST_PROTOCOL)
+
+    def load(self,name):
+        # load object from a file
+        with open(name,"rb") as input:
+            self.__dict__.update(cPickle.load(input))
+        

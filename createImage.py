@@ -2,7 +2,7 @@
 import numpy as np
 import cv2,os
 
-# prepare topics
+# prepare topics beforehand
 topic1 = np.array([1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0])*255
 topic2 = np.array([0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0])*255
 topic3 = np.array([0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0])*255

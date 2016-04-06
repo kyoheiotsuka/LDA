@@ -25,7 +25,7 @@ if __name__ == "__main__":
 	# apply latent dirichlet allocation
 	model = lda.LDA()
 	model.setData(data)
-	model.solve(nTopics=8)
+	model.solve(nTopics=nTopics)
 
 	# show topics obtained
 	for i in range(8):

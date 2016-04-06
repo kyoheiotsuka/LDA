@@ -28,7 +28,7 @@ if __name__ == "__main__":
 	model.solve(nTopics=nTopics)
 
 	# show topics obtained
-	for i in range(8):
+	for i in range(nTopics):
 	    topic = model.qPhi[i,:]
 	    topic = topic/topic.max()*255
 	    topic = topic.reshape((4,4))
